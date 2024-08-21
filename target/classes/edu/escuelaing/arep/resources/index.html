@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicaciones Distribuidas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <h1>GET Request</h1>
+            <p>Click the button to fetch data using a GET request.</p>
+            <img src="spiderman.jpg" alt="The incredible spiderman">
+            <input type="text" id="textInputGet" placeholder="Type your name here..." />
+            <button onclick="loadGetMsg()">Get Input</button>
+            <div id="getResult"></div>
+        </div>
+
+        <div class="content">
+            <h1>POST Request</h1>
+            <p>Click the button to submit data using a POST request.</p>
+            <img src="spiderman.jpg" alt="The incredible spiderman">
+            <input type="text" id="textInputPost" placeholder="Type your name here..." />
+            <button onclick="loadPostMsg()">Post Input</button>
+            <div id="postResult"></div>
+        </div>
+    </div>
+
+    <script>
+        function loadGetMsg() {
+            let nameVar = document.getElementById("textInputGet").value;
+            console.log("GET request sent with name:", nameVar);
+
+            const xhttp = new XMLHttpRequest();
+            xhttp.onload = function() {
+                console.log("GET response received:", this.responseText);
+                document.getElementById("getResult").innerHTML = this.responseText;
+            }
+            xhttp.open("GET", "/app/hello?name=" + nameVar);
+            xhttp.send();
+        }
+
+        function loadPostMsg() {
+            let nameVar = document.getElementById("textInputPost").value;
+            let url = "/app/hellopost?name=" + nameVar;
+            console.log("POST request sent with name:", nameVar);
+
+            fetch(url, {method: 'POST'})
+                .then(response => response.text())
+                .then(text => {
+                    console.log("POST response received:", text);
+                    document.getElementById("postResult").innerHTML = text;
+                })
+                .catch(error => console.error("Error in POST request:", error));
+        }
+    </script>
+</body>
+</html>

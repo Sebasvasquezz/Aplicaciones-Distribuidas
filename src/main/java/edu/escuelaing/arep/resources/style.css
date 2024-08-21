@@ -1,0 +1,46 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    background-color: #fff5f5;
+    border: 2px solid #d32f2f;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    max-width: 600px;
+    text-align: center;
+}
+
+h1 {
+    color: #b71c1c;
+    font-size: 2.5em;
+    margin-bottom: 20px;
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.spiderman-img {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 8px;
+    border: 5px solid #d32f2f;
+    margin-bottom: 20px;
+}
+
+p {
+    color: #d32f2f;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
