@@ -9,20 +9,19 @@
 <body>
     <div class="container">
         <div class="content">
-            <h1>GET Request</h1>
-            <p>Click the button to fetch data using a GET request.</p>
+            <h1>GET Hello Request</h1>
+            <p>Click the button to use the hello service using a GET request.</p>
             <img src="spiderman.jpg" alt="The incredible spiderman">
             <input type="text" id="textInputGet" placeholder="Type your name here..." />
-            <button onclick="loadGetMsg()">Get Input</button>
+            <button onclick="loadGetMsg()">Hello Input</button>
             <div id="getResult"></div>
         </div>
-
         <div class="content">
-            <h1>POST Request</h1>
-            <p>Click the button to submit data using a POST request.</p>
+            <h1>POST Echo Request</h1>
+            <p>Click the button to use the echo service using a POST request.</p>
             <img src="spiderman.jpg" alt="The incredible spiderman">
-            <input type="text" id="textInputPost" placeholder="Type your name here..." />
-            <button onclick="loadPostMsg()">Post Input</button>
+            <input type="text" id="textInputPost" placeholder="Type any text here..." />
+            <button onclick="loadPostMsg()">Echo Input</button>
             <div id="postResult"></div>
         </div>
     </div>
@@ -42,17 +41,23 @@
         }
 
         function loadPostMsg() {
-            let nameVar = document.getElementById("textInputPost").value;
-            let url = "/app/hellopost?name=" + nameVar;
-            console.log("POST request sent with name:", nameVar);
+            let echoText = document.getElementById("textInputPost").value;
+            let url = "/app/echo";
+            console.log("POST request sent with text:", echoText);
 
-            fetch(url, {method: 'POST'})
-                .then(response => response.text())
-                .then(text => {
-                    console.log("POST response received:", text);
-                    document.getElementById("postResult").innerHTML = text;
-                })
-                .catch(error => console.error("Error in POST request:", error));
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: echoText })
+            })
+            .then(response => response.text())
+            .then(text => {
+                console.log("POST response received:", text);
+                document.getElementById("postResult").innerHTML = text;
+            })
+            .catch(error => console.error("Error in POST request:", error));
         }
     </script>
 </body>

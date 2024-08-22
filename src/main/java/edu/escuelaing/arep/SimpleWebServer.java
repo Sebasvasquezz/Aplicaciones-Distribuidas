@@ -6,13 +6,26 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
 
+/**
+ * The SimpleWebServer class represents a basic multithreaded web server
+ * that listens on a specified port and serves static files or handles
+ * custom RESTful services. The server can handle multiple clients
+ * concurrently using a thread pool.
+ */
 public class SimpleWebServer {
-    private static final int PORT = 8080;
+    static final int PORT = 8080;
     public static final String WEB_ROOT = "src/main/java/edu/escuelaing/arep/resources/";
     public static Map<String, RestService> services = new HashMap<>();
     private static boolean running = true;
 
-
+    /**
+     * The main entry point of the SimpleWebServer. It sets up the server
+     * to listen on the specified port, initializes REST services, and
+     * handles incoming client connections.
+     *
+     * @param args command-line arguments (not used).
+     * @throws IOException if an I/O error occurs while opening the server socket.
+     */
     public static void main(String[] args) throws IOException {
         ExecutorService threadPool = Executors.newFixedThreadPool(10);
         ServerSocket serverSocket = new ServerSocket(PORT);
@@ -26,22 +39,48 @@ public class SimpleWebServer {
         threadPool.shutdown();
     }
 
-    private static void addServices() {
+    /**
+     * Registers the available RESTful services that the server can handle.
+     * These services are stored in a static map for quick lookup.
+     */
+    static void addServices() {
         services.put("hello", new HelloService());
+        services.put("echo", new EchoService());
     }
 
+    /**
+     * Stops the server by setting the running flag to false.
+     * This method is called to gracefully shut down the server.
+     */
     public static void stop() {
         running = false;
     }
 }
 
+
+/**
+ * The ClientHandler class implements Runnable and is responsible for
+ * handling individual client connections to the SimpleWebServer. It
+ * processes HTTP requests, serves static files, and delegates requests
+ * to registered RESTful services.
+ */
 class ClientHandler implements Runnable {
     private Socket clientSocket;
 
+    /**
+     * Constructs a new ClientHandler for the given client socket.
+     *
+     * @param socket the client socket to handle.
+     */
     public ClientHandler(Socket socket) {
         this.clientSocket = socket;
     }
 
+    /**
+     * The run method is invoked when the ClientHandler is executed by a thread.
+     * It processes the client's HTTP request, determines the type of request,
+     * and calls the appropriate method to handle it.
+     */
     @Override
     public void run() {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -57,8 +96,7 @@ class ClientHandler implements Runnable {
 
             printRequestLine(requestLine, in);
             if (fileRequested.startsWith("/app")) {
-                handleAppRequest(method, fileRequested, out);
-                System.out.println("entro");
+                handleAppRequest(method, fileRequested,in, out);
             } else {
                 if (method.equals("GET")) {
                     handleGetRequest(fileRequested, out, dataOut);
@@ -71,13 +109,19 @@ class ClientHandler implements Runnable {
             e.printStackTrace();
         } finally {
             try {
-                clientSocket.close(); // Cerrando el socket aquí, después de procesar la solicitud
+                clientSocket.close(); 
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
 
+    /**
+     * Prints the request line and headers from the client's HTTP request to the console.
+     *
+     * @param requestLine the initial request line (e.g., "GET /index.html HTTP/1.1").
+     * @param in the BufferedReader for reading the client's request headers.
+     */    
     private void printRequestLine(String requestLine, BufferedReader in) {
         System.out.println("Request line: " + requestLine);
         String inputLine;
@@ -93,8 +137,17 @@ class ClientHandler implements Runnable {
         }
     }
 
-    private void handleGetRequest(String fileRequested, PrintWriter out, BufferedOutputStream dataOut)
-            throws IOException {
+    /**
+     * Handles a GET request by serving a static file from the server's root directory.
+     * If the file is found, it is sent to the client along with appropriate HTTP headers.
+     * If the file is not found, a 404 error message is returned.
+     *
+     * @param fileRequested the file requested by the client.
+     * @param out the PrintWriter to send the HTTP headers to the client.
+     * @param dataOut the BufferedOutputStream to send the file data to the client.
+     * @throws IOException if an I/O error occurs while reading the file or sending the response.
+     */    
+    private void handleGetRequest(String fileRequested, PrintWriter out, BufferedOutputStream dataOut) throws IOException {
         File file = new File(SimpleWebServer.WEB_ROOT, fileRequested);
         int fileLength = (int) file.length();
         String content = getContentType(fileRequested);
@@ -118,6 +171,15 @@ class ClientHandler implements Runnable {
         }
     }
 
+    /**
+     * Handles a POST request by reading the request payload and returning a simple HTML
+     * response that includes the received data.
+     *
+     * @param fileRequested the file requested by the client (not used in this method).
+     * @param out the PrintWriter to send the HTTP headers and response to the client.
+     * @param dataOut the BufferedOutputStream to send the response body to the client.
+     * @throws IOException if an I/O error occurs while reading the input or sending the response.
+     */
     private void handlePostRequest(String fileRequested, PrintWriter out, BufferedOutputStream dataOut) throws IOException {
         StringBuilder payload = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
@@ -136,39 +198,58 @@ class ClientHandler implements Runnable {
         out.flush();
     }
 
-    private void handleAppRequest(String method, String fileRequested, PrintWriter out) {
-        System.out.println("Entró en handleAppRequest");
-        
-        // Log para mostrar el método HTTP y la solicitud recibida
-        System.out.println("Método HTTP: " + method);
-        System.out.println("Archivo solicitado: " + fileRequested);
-        
-        // Enviar la cabecera de la respuesta
+    /**
+     * Handles an application-specific request, delegating the processing to a registered
+     * RESTful service based on the request method (GET or POST).
+     *
+     * @param method the HTTP method of the request (GET or POST).
+     * @param fileRequested the specific endpoint requested (e.g., "/app/hello").
+     * @param in the BufferedReader for reading the request body (for POST requests).
+     * @param out the PrintWriter to send the response to the client.
+     */
+    private void handleAppRequest(String method, String fileRequested, BufferedReader in, PrintWriter out) {
         out.println("HTTP/1.1 200 OK");
         out.println("Content-type: text/plain");
         out.println();
-        
-        // Log para verificar el servicio que se obtiene
-        RestService service = SimpleWebServer.services.get("hello");
-        if (service != null) {
-            System.out.println("Servicio obtenido: " + service.getClass().getName());
+    
+        RestService service;
+        String response = "";
+    
+        if ("GET".equalsIgnoreCase(method)) {
+            service = SimpleWebServer.services.get("hello");
+            response = service != null ? service.response(fileRequested) : "Error: Servicio no disponible";
+        } else if ("POST".equalsIgnoreCase(method)) {
+            try {
+                String line;
+                int contentLength = 0;
+                while ((line = in.readLine()) != null && !line.isEmpty()) {
+                    if (line.startsWith("Content-Length:")) {
+                        contentLength = Integer.parseInt(line.split(":")[1].trim());
+                    }
+                }
+                char[] charArray = new char[contentLength];
+                in.read(charArray, 0, contentLength);
+                String requestBody = new String(charArray);
+                service = SimpleWebServer.services.get("echo");
+                response = service != null ? service.response(requestBody) : "Error: Servicio no disponible";
+            } catch (IOException e) {
+                e.printStackTrace();
+                response = "Error al procesar la solicitud";
+            }
         } else {
-            System.out.println("Error: El servicio 'hello' no se encontró en 'SimpleWebServer.services'");
+            response = "Error: Método no soportado";
         }
-        
-        // Generación de la respuesta y log para mostrar el contenido
-        String response = service != null ? service.response(fileRequested) : "Error: Servicio no disponible";
-        System.out.println("La respuesta es: " + response);
-        
-        // Enviar la respuesta al cliente
         out.println(response);
         out.flush();
-        
-        System.out.println("Respuesta enviada y conexión flush");
     }
-    
 
-    private String getContentType(String fileRequested) {
+    /**
+     * Determines the MIME type of the requested file based on its extension.
+     *
+     * @param fileRequested the file requested by the client.
+     * @return the MIME type of the file.
+     */
+    String getContentType(String fileRequested) {
         if (fileRequested.endsWith(".html"))
             return "text/html";
         else if (fileRequested.endsWith(".css"))
@@ -182,7 +263,15 @@ class ClientHandler implements Runnable {
         return "text/plain";
     }
 
-    private byte[] readFileData(File file, int fileLength) throws IOException {
+    /**
+     * Reads the contents of a file into a byte array.
+     *
+     * @param file the file to be read.
+     * @param fileLength the length of the file in bytes.
+     * @return a byte array containing the file's data.
+     * @throws IOException if an I/O error occurs while reading the file.
+     */
+    byte[] readFileData(File file, int fileLength) throws IOException {
         FileInputStream fileIn = null;
         byte[] fileData = new byte[fileLength];
         try {
